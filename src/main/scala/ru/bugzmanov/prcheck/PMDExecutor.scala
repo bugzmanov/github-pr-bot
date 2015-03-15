@@ -1,6 +1,6 @@
 package ru.bugzmanov.prcheck
 
-import java.io.StringWriter
+import java.io.{File, StringWriter}
 import java.util.Collections
 
 import net.sourceforge.pmd._
@@ -9,12 +9,13 @@ import net.sourceforge.pmd.lang.{Language, LanguageFilenameFilter}
 import net.sourceforge.pmd.renderers.Renderer
 import net.sourceforge.pmd.util.FileUtil
 import net.sourceforge.pmd.util.datasource.DataSource
+import org.apache.commons.io.filefilter.AbstractFileFilter
 
 import scala.collection.JavaConversions._
 
 
 trait ViolationChecker {
-  def execute(inputPath: String): Vector[ViolationIssue] 
+  def execute(inputPath: String, fileFilter: Set[String] = Set()): Vector[ViolationIssue]
   def description: String
 }
 
@@ -33,11 +34,11 @@ object PMDExecutor extends ViolationChecker {
 
   val description = "PMD"
   
-  def execute(inputPath: String): Vector[ViolationIssue] = {
+  def execute(inputPath: String, fileFilter: Set[String] = Set()): Vector[ViolationIssue] = {
     val ruleSetFactory = new RuleSetFactory
 
     val languages: Set[Language] = Set(new JavaLanguageModule)
-    val files = getApplicableFiles(inputPath, languages)
+    val files = getApplicableFiles(inputPath, languages, fileFilter)
 
     val renderer = new net.sourceforge.pmd.renderers.CSVRenderer()
 
@@ -67,15 +68,22 @@ object PMDExecutor extends ViolationChecker {
       //        "rulesets/java/controversial.xml," +
       //        "rulesets/java/optimizations.xml," +
 
-    PMD.processFiles(configuration, ruleSetFactory, files, ctx, Collections.singletonList(renderer).asInstanceOf[List[Renderer]])
+    PMD.processFiles(configuration, ruleSetFactory, files, ctx, Collections.singletonList(renderer).asInstanceOf[java.util.List[Renderer]])
     renderer.end()
     renderer.flush()
     writer.getBuffer.toString.split("\n").toVector.tail.map(PMDIssue(_))
   }
 
-  def getApplicableFiles(inputPath: String, languages: Set[Language]): java.util.List[DataSource] = {
+  def getApplicableFiles(inputPath: String, languages: Set[Language], fileFilter: Set[String]): java.util.List[DataSource] = {
     val fileSelector: LanguageFilenameFilter = new LanguageFilenameFilter(languages)
-    FileUtil.collectFiles(inputPath, fileSelector)
+    FileUtil.collectFiles(inputPath, new AbstractFileFilter {
+
+      fileSelector
+
+      override def accept(file: File): Boolean = {
+        fileSelector.accept(file.getParentFile, file.getName) && (fileFilter.isEmpty || fileFilter.contains(file.getCanonicalPath))
+      }
+    })
   }
 }
 

@@ -40,7 +40,13 @@ class GithubApi(account: String, repo: String, header: String, username: String,
       .assertStatus(HttpStatus.SC_OK)
       .toString
 
+  def publishPrCommentFake(pr: Int, body: String) = println(body)
+
   def publishPrComment(pr: Int, body: String) = githubrepo.issues().get(pr).comments().post(body)
+
+  def publishCommentFake(pr: Int, body: String, commit: String, path: String, position: Int) = {
+    println(s"$path:$position - $body")
+  }
 
   def publishComment(pr: Int, body: String, commit: String, path: String, position: Int) = githubrepo
     .pulls().get(pr)
