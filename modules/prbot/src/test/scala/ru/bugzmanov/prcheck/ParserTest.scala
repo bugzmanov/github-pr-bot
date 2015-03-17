@@ -1,7 +1,5 @@
 package ru.bugzmanov.prcheck
 
-import java.util
-
 import org.scalatest.FlatSpec
 import org.scalatest._
 import Matchers._

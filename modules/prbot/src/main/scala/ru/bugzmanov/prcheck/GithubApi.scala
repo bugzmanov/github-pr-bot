@@ -1,12 +1,14 @@
 package ru.bugzmanov.prcheck
 
 import java.io.File
+import java.net.HttpURLConnection
+import java.util
 import javax.json.JsonObject
 import javax.ws.rs.core.{HttpHeaders, MediaType}
 import javax.xml.bind.DatatypeConverter
 
 import com.jcabi.github.Coordinates.Simple
-import com.jcabi.github.RtGithub
+import com.jcabi.github.{PullComment, RtGithub}
 import com.jcabi.http.Request
 import com.jcabi.http.request.ApacheRequest
 import com.jcabi.http.response.{JsonResponse, RestResponse}
@@ -20,6 +22,13 @@ case class PullRequest(
   intoBranch: String,
   fromCommit: String,
   toCommit: String
+)
+
+case class Comment(
+  id: Int,
+  prId: Int,
+  author: String,
+  body: String
 )
 
 class GithubApi(account: String, repo: String, header: String, username: String, pass: String, github: RtGithub) {
@@ -88,7 +97,37 @@ class GithubApi(account: String, repo: String, header: String, username: String,
     )
     api.cloneTo(branchName)
     api
+  }
 
+  def getCommentsByUser(prId: Int, userId: String): Vector[Comment] = {
+    val vector = Vector.newBuilder[Comment]
+    val iterator = githubrepo.pulls().get(prId).comments().iterate(java.util.Collections.emptyMap()).iterator()
+    while(iterator.hasNext) {
+      val next: PullComment = iterator.next()
+      if(next.json().getJsonObject("user").getString("login") == userId) {
+        vector += new Comment(
+            next.number(),
+            prId,
+            next.json().getJsonObject("user").getString("login"),
+            next.json().getString("body"))
+
+      }
+    }
+    vector.result()
+  }
+
+  def cleanPrComments(comments: Vector[Comment]) = {
+    comments.foreach { c =>
+      try {
+        github.entry().uri().path(s"repos/$account/$repo/pulls/comments/${c.id}}").back()
+          .method(Request.DELETE)
+          .fetch().as(classOf[RestResponse])
+          .assertStatus(HttpURLConnection.HTTP_NO_CONTENT)
+//        Thread.sleep(1000)
+      } catch {
+        case e: AssertionError => //do nothing
+      }
+    }
   }
 }
 
