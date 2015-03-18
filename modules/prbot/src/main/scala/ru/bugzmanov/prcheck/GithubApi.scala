@@ -27,11 +27,27 @@ case class PullRequest(
 case class Comment(
   id: Int,
   prId: Int,
+  path: String,
+  lineNumber: Int,
+  commitId: String,
   author: String,
   body: String
-)
+) {
 
-class GithubApi(account: String, repo: String, header: String, username: String, pass: String, github: RtGithub) {
+  val uniqueKey = s"$path:$lineNumber:$body"
+}
+
+object Comment {
+  def apply(prId: Int,
+            path: String,
+            lineNumber: Int,
+            commitId: String,
+            author: String,
+            body: String) = new Comment(0, prId, path, lineNumber, commitId, author, body)
+
+}
+
+class GithubApi(account: String, val repo: String, header: String, username: String, pass: String, github: RtGithub) {
 
   private val githubrepo = github.repos().get(new Simple(account, repo))
 
@@ -106,24 +122,26 @@ class GithubApi(account: String, repo: String, header: String, username: String,
       val next: PullComment = iterator.next()
       if(next.json().getJsonObject("user").getString("login") == userId) {
         vector += new Comment(
-            next.number(),
-            prId,
-            next.json().getJsonObject("user").getString("login"),
-            next.json().getString("body"))
+            id = next.number(),
+            prId = prId,
+            path = next.json().getString("path"),
+            lineNumber = next.json().getInt("position"),
+            commitId = next.json().getString("commit_id"),
+            author = next.json().getJsonObject("user").getString("login"),
+            body = next.json().getString("body"))
 
       }
     }
     vector.result()
   }
 
-  def cleanPrComments(comments: Vector[Comment]) = {
+  def cleanCommitComments(comments: Vector[Comment]) = {
     comments.foreach { c =>
       try {
         github.entry().uri().path(s"repos/$account/$repo/pulls/comments/${c.id}}").back()
           .method(Request.DELETE)
           .fetch().as(classOf[RestResponse])
           .assertStatus(HttpURLConnection.HTTP_NO_CONTENT)
-//        Thread.sleep(1000)
       } catch {
         case e: AssertionError => //do nothing
       }

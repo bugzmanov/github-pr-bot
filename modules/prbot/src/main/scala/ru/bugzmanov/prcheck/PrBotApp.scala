@@ -11,23 +11,47 @@ object PrBotApp {
   def main(args: Array[String]) {
   }
 
-  def doCodeReviewApiCall(url: String, token: String) = {
+  def removeComments(url: String, token: String, botName: String) = {
     val pullRequestApi(account, repo, prNumber) = url
-    doCodeReview(account, repo, prNumber, token)
+    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
+    val botComments = githubApi.getCommentsByUser(prNumber.toInt, botName)
+    githubApi.cleanCommitComments(botComments)
   }
 
-  def doCodeReview(url: String, token: String): Unit = {
+  def publishComment(url: String, message: String, token: String) = {
+    val pullRequestApi(account, repo, prNumber) = url
+    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
+    githubApi.publishPrComment(prNumber.toInt, message)
+  }
+
+  def runReviewOnApiCall(url: String, token: String) = {
+    val pullRequestApi(account, repo, prNumber) = url
+    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
+    makeReview(prNumber.toInt, githubApi)
+  }
+
+  def runReview(url: String, token: String): Unit = {
     val pullRequest(account, repo, prNumber) = url
-    doCodeReview(account, repo, prNumber, token)
+    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
+
+    makeReview(prNumber.toInt, githubApi)
   }
 
-  def doCodeReview(account: String, repo: String, prNumber: String, token: String): Unit = {
-    val tmpDir: String = s"/tmp/github-$repo/"
+  def makeReview(prNumber: Int, githubApi: GithubApi): Unit = {
+    
+    val (commitComment, generalComment) = collectReviewComments(githubApi, prNumber, "iasbot", Seq(PMDExecutor, CheckstyleExecutor))
+    commitComment.foreach { c =>
+      githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
+    }
+    githubApi.publishPrComment(prNumber, generalComment)
+  }
+
+  def collectReviewComments(githubApi: GithubApi, prNumber: Int, botuser: String, checkers: Seq[ViolationChecker]): (Vector[Comment], String) = {
+    val tmpDir: String = s"/tmp/github-${githubApi.repo}-${System.currentTimeMillis()}/"
     val prId: Int = prNumber.toInt
     val tmpDirFile: File = new File(tmpDir)
 
-    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
-    val prModel = githubApi.describePR(prId)
+    val pullRequest = githubApi.describePR(prId)
 
     val diffContent: String = githubApi.downloadDiff(prId)
 
@@ -36,38 +60,48 @@ object PrBotApp {
         k => (new File(tmpDir + k.revised).getCanonicalPath, k)
       ).toMap
 
+    val git = githubApi.cloneTo(tmpDirFile, pullRequest.fromBranch)
 
-    val git: GitApi = githubApi.cloneTo(tmpDirFile, prModel.fromBranch)
+    val violations = checkers.flatMap { check =>
+      check.execute(tmpDir, diffModel.keySet)
+        .filter(issue => diffModel.get(issue.file).exists(_.isWithinRevisedVersion(issue.line)))
+    }
 
+    val requiredPrComments = violations.map {f =>
+      Comment(prId, f.file.substring(tmpDirFile.getCanonicalPath.size+1), f.line, pullRequest.fromCommit,  botuser, s"[${f.tag}] ${f.description}")
+    }.toVector
+
+    val newPrComments = {
+      val oldBotComments = githubApi.getCommentsByUser(prNumber, botuser).map(_.uniqueKey).toSet
+      requiredPrComments.filterNot(c => oldBotComments.contains(c.uniqueKey))
+    }
+
+    val generalComment = createGeneralComment(checkers, pullRequest, git, tmpDir, diffModel.keySet)
     
-//    val user: Vector[Comment] = githubApi.getCommentsByUser(prNumber.toInt, "iasbot")
-//    githubApi.cleanPrComments(user)
-    val pmdIssues = PMDExecutor.execute(tmpDir, diffModel.keySet)
-      .filter(issue => diffModel.get(issue.file).exists(_.isWithinRevisedVersion(issue.line)))
+    git.clean()
 
-    val checkStyleIssues = CheckstyleExecutor.execute(tmpDir, diffModel.keySet)
-      .filter(issue => diffModel.get(issue.file).exists(_.isWithinRevisedVersion(issue.line)))
+    (newPrComments, generalComment )
+  }
 
-    (pmdIssues  ++ checkStyleIssues).foreach{f =>
-      githubApi.publishComment(prId, s"[${f.tag}] ${f.description}", prModel.fromCommit, f.file.substring(tmpDirFile.getCanonicalPath.size+1), f.line)}
-
+  
+  private def createGeneralComment(checkers: Seq[ViolationChecker], prModel: PullRequest, git: GitApi, tmpDir: String, filter: Set[String]): String = {
     git.changeBranch(prModel.intoBranch)
-    val pmdBefore = PMDExecutor.execute(tmpDir, diffModel.keySet).toSet.size
-    val checkstyleBefore =  CheckstyleExecutor.execute(tmpDir, diffModel.keySet).toSet.size
+
+    val before = checkers.map { check =>
+      (check.description, check.execute(tmpDir, filter).toSet.size)
+    }.toMap
 
     git.merge(prModel.fromBranch)
-    val pmdAfter = PMDExecutor.execute(tmpDir, diffModel.keySet).toSet.size
-    val checkstyleAfter = CheckstyleExecutor.execute(tmpDir, diffModel.keySet).toSet.size
 
-    val karma = if (pmdAfter - pmdBefore > 0 || checkstyleAfter - checkstyleBefore > 0) s"@${prModel.author}++ for making code cleaner" else ""
+    val checksDiff = checkers.map { check =>
+      (check.description, check.execute(tmpDir, filter).toSet.size - before(check.description))
+    }.toMap
 
-    githubApi.publishPrComment(prId,s"""
-       | PMD Viloations after PR: ${pmdAfter - pmdBefore}\n
-       | Checkstyle Viloations after PR: ${checkstyleAfter - checkstyleBefore}\n
-       | \n
-       | $karma
-     """.stripMargin)
+    val karma = if (checksDiff.values.sum < 0) s"@${prModel.author}++ for making code cleaner" else ""
 
-    git.clean()
+    val generalComment = checksDiff.foldLeft("") { case (result, (check, diff)) =>
+      result + s"$check violations diff: $diff\n"
+    }
+    generalComment + karma
   }
 }
