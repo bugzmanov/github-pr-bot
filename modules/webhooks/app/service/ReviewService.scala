@@ -3,18 +3,16 @@ package service
 import java.util.concurrent.{CopyOnWriteArrayList, ConcurrentHashMap, Executors}
 
 import controllers.PullRequest
-import ru.bugzmanov.prcheck.PrBotApp
+import ru.bugzmanov.prcheck.PrBot
 import play.api.Logger
 
-class ReviewService(botname: String, bottoken: String) {
+class ReviewService(prbot: PrBot) {
 
   val logger: Logger = Logger(this.getClass)
 
   val processing: ConcurrentHashMap[Int, AnyRef] = new ConcurrentHashMap[Int, AnyRef]()
 
   val executors = Executors.newFixedThreadPool(5)
-
-  val prbot = PrBotApp
 
   def reviewAsync(pr: PullRequest) = {
     if (!processing.containsKey(pr.number)) {
@@ -23,7 +21,7 @@ class ReviewService(botname: String, bottoken: String) {
           logger.info(s"Started reviewing pull request: ${pr.url}")
           processing.put(pr.number, new Object())
           try {
-            prbot.runReviewOnApiCall(pr.url, bottoken)
+            prbot.runReviewOnApiCall(pr.url)
             logger.info(s"Successfully finished reviewing pull request: ${pr.url}")
           } catch {
             case e: Exception => logger.error(s"Pull request review failed ${pr.url}", e)
@@ -39,7 +37,7 @@ class ReviewService(botname: String, bottoken: String) {
     executors.submit(new Runnable {
       override def run(): Unit = {
         try {
-          prbot.removeComments(pullRequestUrl, bottoken, botname)
+          prbot.removeComments(pullRequestUrl)
         } catch {
           case e: Exception => logger.error("Couldn't remove code review comments", e)
         }

@@ -3,34 +3,37 @@ package ru.bugzmanov.prcheck
 import java.io.File
 
 
-object PrBotApp {
+class PrBot(token: String, botName: String) {
 
   val pullRequest = "https://github.com/(.*)/(.*)/pull/(.*)".r
   val pullRequestApi = "https://api.github.com/repos/(.*)/(.*)/pulls/(.*)".r
 
-  def main(args: Array[String]) {
+  def updateDescriprtion(url: String, description: String) = {
+    val pullRequestApi(account, repo, prNumber) = url
+    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
+    githubApi.publishPrComment(prNumber.toInt, description)
   }
 
-  def removeComments(url: String, token: String, botName: String) = {
+  def removeComments(url: String) = {
     val pullRequestApi(account, repo, prNumber) = url
     val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
     val botComments = githubApi.getCommentsByUser(prNumber.toInt, botName)
     githubApi.cleanCommitComments(botComments)
   }
 
-  def publishComment(url: String, message: String, token: String) = {
+  def publishComment(url: String, message: String) = {
     val pullRequestApi(account, repo, prNumber) = url
     val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
     githubApi.publishPrComment(prNumber.toInt, message)
   }
 
-  def runReviewOnApiCall(url: String, token: String) = {
+  def runReviewOnApiCall(url: String) = {
     val pullRequestApi(account, repo, prNumber) = url
     val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
     makeReview(prNumber.toInt, githubApi)
   }
 
-  def runReview(url: String, token: String): Unit = {
+  def runReview(url: String): Unit = {
     val pullRequest(account, repo, prNumber) = url
     val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
 
@@ -39,7 +42,7 @@ object PrBotApp {
 
   def makeReview(prNumber: Int, githubApi: GithubApi): Unit = {
     
-    val (commitComment, generalComment) = collectReviewComments(githubApi, prNumber, "iasbot", Seq(PMDExecutor, CheckstyleExecutor))
+    val (commitComment, generalComment) = collectReviewComments(githubApi, prNumber, botName, Seq(PMDExecutor, CheckstyleExecutor))
     commitComment.foreach { c =>
       githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
     }
@@ -68,7 +71,7 @@ object PrBotApp {
     }
 
     val requiredPrComments = violations.map {f =>
-      Comment(prId, f.file.substring(tmpDirFile.getCanonicalPath.size+1), f.line, pullRequest.fromCommit,  botuser, s"[${f.tag}] ${f.description}")
+      Comment(prId, f.file.substring(tmpDirFile.getCanonicalPath.size+1), f.line, pullRequest.fromCommit,  botuser, s"[${f.tag}] <${f.rule}> ${f.description}")
     }.toVector
 
     val newPrComments = {

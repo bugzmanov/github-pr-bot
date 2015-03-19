@@ -71,7 +71,9 @@ object PMDExecutor extends ViolationChecker {
     PMD.processFiles(configuration, ruleSetFactory, files, ctx, Collections.singletonList(renderer).asInstanceOf[java.util.List[Renderer]])
     renderer.end()
     renderer.flush()
-    writer.getBuffer.toString.split("\n").toVector.tail.map(PMDIssue(_))
+    writer.getBuffer.toString.split("\n").toVector.tail.map(PMDIssue(_)).filterNot(f=> f.file.contains("src/test")
+      && (f.rule == "LawOfDemeter" || f.rule == "LongVariable" || f.rule == "AbstractNaming"
+      || f.rule == "JUnitTestsShouldIncludeAssert" || f.rule == "JUnitSpelling"))
   }
 
   def getApplicableFiles(inputPath: String, languages: Set[Language], fileFilter: Set[String]): java.util.List[DataSource] = {

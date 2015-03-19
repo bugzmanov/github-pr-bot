@@ -27,7 +27,14 @@ object CheckstyleExecutor extends ViolationChecker {
 
     checker.addListener(listener)
     checker.process(files)
-    listener.getResult
+    listener.getResult.filterNot(f =>
+      f.file.contains("src/test") &&
+        (f.rule == "com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck" ||
+         f.rule == "com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck" ||
+         f.rule == "com.puppycrawl.tools.checkstyle.checks.naming.MethodNameCheck" ||
+         f.rule == "com.puppycrawl.tools.checkstyle.checks.imports.CustomImportOrderCheck" ||
+         f.rule == "com.puppycrawl.tools.checkstyle.checks.naming.AbbreviationAsWordInNameCheck"
+          ))
   }
 
   override def description: String = "style"

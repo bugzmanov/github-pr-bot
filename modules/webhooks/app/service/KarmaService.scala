@@ -1,29 +1,28 @@
 package service
 
-import java.util.concurrent.ConcurrentHashMap
+import ru.bugzmanov.prcheck.PrBot
 
-import ru.bugzmanov.prcheck.PrBotApp
+import scala.util.Random
 
-class KarmaService(token: String) {
+class KarmaService(prbot: PrBot, storage: SimpleStorage) {
 
-  val karma: ConcurrentHashMap[String, Integer] =  new ConcurrentHashMap[String, Integer]()
+  val UpVoteMessage = Seq("leveled up!", "is on the rise!", "+1!", "gained a level!")
+  val DownVoteMessage = Seq("lost a level.", "took a hit! Ouch.", "took a hit.", "lost a life.")
 
   val karmaRise = ".*@(.+)\\+\\+.*".r
   val karmaFall = ".*@(.+)--.*".r
 
   def handleKarma(url: String, expression: String) = {
-
+    import Random.shuffle
     expression match {
       case karmaRise(username) =>
-        val current: Integer = karma.putIfAbsent(username, 1)
-        if (current != null)
-          karma.replace(username, current + 1)
-        PrBotApp.publishComment(url, s"@$username is on a rise! Karma: ${karma.get(username)}", token)
+        val current = storage.get(username).map(_.toInt).getOrElse(0) + 1
+        storage.put(username, current.toString)
+        prbot.publishComment(url, s"@$username " + shuffle(UpVoteMessage).head + s" Karma: $current")
       case karmaFall(username) =>
-        val current: Integer = karma.putIfAbsent(username, -1)
-        if (current != null)
-          karma.replace(username, current - 1)
-        PrBotApp.publishComment(url, s"@$username took a hit! Ouch.. Karma: ${karma.get(username)}", token)
+        val current = storage.get(username).map(_.toInt).getOrElse(0) - 1
+        storage.put(username, current.toString)
+        prbot.publishComment(url, s"@$username " + shuffle(DownVoteMessage).head + s" Karma: $current")
       case _ => //do nothing
     }
   }

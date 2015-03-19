@@ -1,6 +1,6 @@
 package ru.bugzmanov.prcheck
 
-import java.io.File
+import java.io.{ByteArrayInputStream, StringBufferInputStream, File}
 import java.net.HttpURLConnection
 import java.util
 import javax.json.JsonObject

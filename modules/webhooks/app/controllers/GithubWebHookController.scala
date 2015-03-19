@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import play.api.libs.json._
 import play.api._
 import play.api.mvc._
-import service.{KarmaService, ReviewService}
+import service.{JiraLinkerService, KarmaService, ReviewService}
 
 trait GithubWebHookController extends Controller {
 
@@ -13,9 +13,11 @@ trait GithubWebHookController extends Controller {
 
   def karmaService: KarmaService
 
+  def jiraLinker: JiraLinkerService
+
   def botname = "iasbot"
   
-  implicit val entityReads = Json.reads[PullRequest]
+//  implicit val entityReads = Json.reads[PullRequest]
 
   def incoming = Action(BodyParsers.parse.json) { implicit request =>
     request.headers.get("X-GitHub-Event").map {
@@ -32,6 +34,10 @@ trait GithubWebHookController extends Controller {
     action.collect { case "opened" =>
       val number = request.body \ "number"
       val url = request.body \ "pull_request" \ "url"
+      val title = request.body \ "pull_request" \ "title"
+
+//      jiraLinker.handlePullRequest(url.as[String], title.as[String])
+//
       reviewService.reviewAsync(new PullRequest("opened", number.as[Int], url.as[String]))
     }
   }
@@ -60,3 +66,10 @@ case class PullRequest (
   number: Int,
   url: String
 )
+
+object PullRequest {
+
+  def apply(json: JsValue) = {
+
+  }
+}
