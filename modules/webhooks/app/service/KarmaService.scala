@@ -1,10 +1,10 @@
 package service
 
-import ru.bugzmanov.prcheck.PrBot
+import ru.bugzmanov.prcheck.PullRequestBot
 
 import scala.util.Random
 
-class KarmaService(prbot: PrBot, storage: SimpleStorage) {
+class KarmaService(prbot: PullRequestBot, storage: SimpleStorage) {
 
   val UpVoteMessage = Seq("leveled up!", "is on the rise!", "+1!", "gained a level!")
   val DownVoteMessage = Seq("lost a level.", "took a hit! Ouch.", "took a hit.", "lost a life.")

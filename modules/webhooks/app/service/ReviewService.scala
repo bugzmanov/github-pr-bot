@@ -3,10 +3,10 @@ package service
 import java.util.concurrent.{CopyOnWriteArrayList, ConcurrentHashMap, Executors}
 
 import controllers.PullRequest
-import ru.bugzmanov.prcheck.PrBot
+import ru.bugzmanov.prcheck.PullRequestBot
 import play.api.Logger
 
-class ReviewService(prbot: PrBot) {
+class ReviewService(prbot: PullRequestBot) {
 
   val logger: Logger = Logger(this.getClass)
 

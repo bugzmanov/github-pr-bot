@@ -1,8 +1,8 @@
 package service
 
-import ru.bugzmanov.prcheck.PrBot
+import ru.bugzmanov.prcheck.PullRequestBot
 
-class JiraLinkerService(prbot: PrBot, projectCodes: Set[String], jiraUrl: String) {
+class JiraLinkerService(prbot: PullRequestBot, projectCodes: Set[String], jiraUrl: String) {
 
   val reg = "([a-zA-Z]+).([0-9]+).*".r
 

@@ -1,4 +1,4 @@
-package ru.bugzmanov.prcheck
+package ru.bugzmanov.prcheck.checks
 
 import java.io.{File, StringWriter}
 import java.util.Collections
@@ -14,21 +14,6 @@ import org.apache.commons.io.filefilter.AbstractFileFilter
 import scala.collection.JavaConversions._
 
 
-trait ViolationChecker {
-  def execute(inputPath: String, fileFilter: Set[String] = Set()): Vector[ViolationIssue]
-  def description: String
-}
-
-case class ViolationIssue(
-  classPackage: String,
-  file: String,
-  priority: Int,
-  line: Int,
-  description: String,
-  ruleSet: String,
-  rule: String,
-  tag: String
-)
 
 object PMDExecutor extends ViolationChecker {
 
@@ -48,22 +33,24 @@ object PMDExecutor extends ViolationChecker {
     val ctx: RuleContext = new RuleContext
     val configuration = new PMDConfiguration()
     configuration.setThreads(3)
-    configuration.setRuleSets("rulesets/java/basic.xml," +
-      "rulesets/java/braces.xml," +
-      "rulesets/java/codesize.xml," +
+    configuration.setRuleSets("pmd_rules.xml")
 
-      "rulesets/java/coupling.xml," +
-      "rulesets/java/design.xml," +
-      "rulesets/java/empty.xml," +
-      "rulesets/java/imports.xml," +
-      "rulesets/java/junit.xml," +
-      "rulesets/java/logging-java.xml," +
-      "rulesets/java/naming.xml," +
-      "rulesets/java/strictexception.xml," +
-      "rulesets/java/strings.xml," +
-      "rulesets/java/sunsecure.xml," +
-      "rulesets/java/unnecessary.xml," +
-      "rulesets/java/unusedcode.xml")
+//    configuration.setRuleSets("rulesets/java/basic.xml," +
+//      "rulesets/java/braces.xml," +
+//      "rulesets/java/codesize.xml," +
+//
+//      "rulesets/java/coupling.xml," +
+//      "rulesets/java/design.xml," +
+//      "rulesets/java/empty.xml," +
+//      "rulesets/java/imports.xml," +
+//      "rulesets/java/junit.xml," +
+//      "rulesets/java/logging-java.xml," +
+//      "rulesets/java/naming.xml," +
+//      "rulesets/java/strictexception.xml," +
+//      "rulesets/java/strings.xml," +
+//      "rulesets/java/sunsecure.xml," +
+//      "rulesets/java/unnecessary.xml," +
+//      "rulesets/java/unusedcode.xml")
     //        "rulesets/java/comments.xml," +
       //        "rulesets/java/controversial.xml," +
       //        "rulesets/java/optimizations.xml," +

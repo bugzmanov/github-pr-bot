@@ -8,7 +8,7 @@ import javax.ws.rs.core.{HttpHeaders, MediaType}
 import javax.xml.bind.DatatypeConverter
 
 import com.jcabi.github.Coordinates.Simple
-import com.jcabi.github.{PullComment, RtGithub}
+import com.jcabi.github.{Pull, PullComment, RtGithub}
 import com.jcabi.http.Request
 import com.jcabi.http.request.ApacheRequest
 import com.jcabi.http.response.{JsonResponse, RestResponse}

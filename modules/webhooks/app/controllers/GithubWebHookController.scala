@@ -10,15 +10,11 @@ import service.{JiraLinkerService, KarmaService, ReviewService}
 trait GithubWebHookController extends Controller {
 
   def reviewService: ReviewService
-
   def karmaService: KarmaService
-
   def jiraLinker: JiraLinkerService
 
-  def botname = "iasbot"
+  def botusername: String
   
-//  implicit val entityReads = Json.reads[PullRequest]
-
   def incoming = Action(BodyParsers.parse.json) { implicit request =>
     request.headers.get("X-GitHub-Event").map {
       case "issue_comment" => issueComment(request)
@@ -36,8 +32,8 @@ trait GithubWebHookController extends Controller {
       val url = request.body \ "pull_request" \ "url"
       val title = request.body \ "pull_request" \ "title"
 
-//      jiraLinker.handlePullRequest(url.as[String], title.as[String])
-//
+      jiraLinker.handlePullRequest(url.as[String], title.as[String])
+
       reviewService.reviewAsync(new PullRequest("opened", number.as[Int], url.as[String]))
     }
   }
@@ -49,11 +45,11 @@ trait GithubWebHookController extends Controller {
         val commentBody = (request.body \ "comment" \ "body").as[String]
         karmaService.handleKarma(url, commentBody)
 
-        if (commentBody.trim == s"@$botname clean the mess") {
+        if (commentBody.trim == s"@$botusername clean the mess") {
           reviewService.removeRobotReviewComments(url)
-        } else if (commentBody.trim == s"@$botname please review") {
-//          reviewService.reviewAsync()
-          throw new Exception("NEEEEVEEEEER!")
+        } else if (commentBody.trim == s"@$botusername please review") {
+          val prNumber = request.body \ "issue" \ "number"
+          reviewService.reviewAsync(new PullRequest("same", prNumber.as[Int], url))
         }
       }
     }

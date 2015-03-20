@@ -1,7 +1,6 @@
-package ru.bugzmanov.prcheck
+package ru.bugzmanov.prcheck.checks
 
-import edu.umd.cs.findbugs.{PrintingBugReporter, FindBugs2, BugCollectionBugReporter, FindBugs}
-
+import edu.umd.cs.findbugs.{FindBugs2, PrintingBugReporter}
 
 object FindBugsExecutor extends ViolationChecker {
   override def execute(inputPath: String, fileFilter: Set[String] = Set()): Vector[ViolationIssue] = {

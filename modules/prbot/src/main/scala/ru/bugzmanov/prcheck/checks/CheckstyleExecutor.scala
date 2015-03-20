@@ -1,15 +1,15 @@
-package ru.bugzmanov.prcheck
+package ru.bugzmanov.prcheck.checks
 
-import java.util
-import java.util.Collections
-
-import com.puppycrawl.tools.checkstyle.{PropertiesExpander, ConfigurationLoader, Checker}
-import com.puppycrawl.tools.checkstyle.api.{SeverityLevel, AuditEvent, AuditListener}
 import java.io.File
+import java.util
 
-import scala.collection.mutable
+import com.puppycrawl.tools.checkstyle.api.{AuditEvent, AuditListener, SeverityLevel}
+import com.puppycrawl.tools.checkstyle.{Checker, ConfigurationLoader, PropertiesExpander}
+
 
 object CheckstyleExecutor extends ViolationChecker {
+
+  val tabCheck = "com.puppycrawl.tools.checkstyle.checks.whitespace.FileTabCharacterCheck"
 
   override def execute(inputPath: String, fileFilter: Set[String] = Set()): Vector[ViolationIssue] = {
     val checker = new Checker
@@ -24,17 +24,16 @@ object CheckstyleExecutor extends ViolationChecker {
     val listener: CheckstylAuditListener = new CheckstylAuditListener
     checker.configure(config)
 
-
     checker.addListener(listener)
     checker.process(files)
     listener.getResult.filterNot(f =>
-      f.file.contains("src/test") &&
-        (f.rule == "com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck" ||
-         f.rule == "com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck" ||
+      f.rule == "com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck" ||
+        f.file.contains("src/test") &&
+        (f.rule == "com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck" ||
          f.rule == "com.puppycrawl.tools.checkstyle.checks.naming.MethodNameCheck" ||
          f.rule == "com.puppycrawl.tools.checkstyle.checks.imports.CustomImportOrderCheck" ||
-         f.rule == "com.puppycrawl.tools.checkstyle.checks.naming.AbbreviationAsWordInNameCheck"
-          ))
+         f.rule == "com.puppycrawl.tools.checkstyle.checks.naming.AbbreviationAsWordInNameCheck")
+    )
   }
 
   override def description: String = "style"
