@@ -1,9 +1,11 @@
 package ru.bugzmanov.prcheck
 
+import org.slf4j.LoggerFactory
 import ru.bugzmanov.prcheck.checks.{PMDExecutor, CheckstyleExecutor}
 
 
 class PullRequestBot(token: String, botName: String) {
+  val logger = LoggerFactory.getLogger("PullRequestBot")
 
   val pullRequest = "https://github.com/(.*)/(.*)/pull/(.*)".r
   val pullRequestApi = "https://api.github.com/repos/(.*)/(.*)/pulls/(.*)".r
@@ -46,7 +48,11 @@ class PullRequestBot(token: String, botName: String) {
     
     val (commitComment, generalComment) = reviewer.collectReviewComments(githubApi, prNumber)
     commitComment.foreach { c =>
-      githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
+      try{
+        githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
+      } catch {
+        case e: Exception => logger.error(s"Failed to publish comment: $c", e)
+      }
     }
     githubApi.publishPrComment(prNumber, generalComment)
   }

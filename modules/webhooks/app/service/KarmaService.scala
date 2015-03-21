@@ -16,8 +16,8 @@ class KarmaService(prbot: PullRequestBot, storage: SimpleStorage) {
   def handleKarma(url: String, expression: String, commentAuthor: String) = {
     import Random.shuffle
     expression match {
-      case karmaRise(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, $username. ಠ_ಠ")
-      case karmaFall(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, $username. ಠ_ಠ")
+      case karmaRise(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, @$username. ಠ_ಠ")
+      case karmaFall(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, @$username. ಠ_ಠ")
       case karmaRise(username) =>
         val current = storage.get(username).map(_.toInt).getOrElse(0) + 1
         storage.put(username, current.toString)

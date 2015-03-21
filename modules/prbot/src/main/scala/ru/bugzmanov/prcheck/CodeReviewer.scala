@@ -41,7 +41,7 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
       else Seq())
     }.map { f =>
       val relativePath = f.file.substring(tmpDirFile.getCanonicalPath.size + 1)
-      Comment(prId, relativePath, f.line, pullRequest.fromCommit, botuser, s"[${f.tag}] <${f.rule}> ${f.description}")
+      Comment(prId, relativePath, f.line, pullRequest.fromCommit, botuser, s"[${f.tag}] ${f.description}")
     }.toVector
 
     val newPrComments = {
