@@ -9,7 +9,7 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
 
   val logger = LoggerFactory.getLogger("CodeReviewer")
 
-  def collectReviewComments(githubApi: GithubApi, prNumber: Int): (Vector[Comment], String) = {
+  def collectReviewComments(githubApi: GithubApi, prNumber: Int): Either[String, (Vector[Comment], String)] = {
     val tmpDir: String = s"/tmp/github-${githubApi.repo}-${System.currentTimeMillis()}/"
     val prId: Int = prNumber.toInt
     val tmpDirFile: File = new File(tmpDir)
@@ -17,6 +17,10 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
     logger.debug(s"Downloading PR $prNumber diff")
 
     val pullRequest = githubApi.describePR(prId)
+
+    if(!pullRequest.isMergeable) {
+      return Left("Sorry can't review request that can't be merged automatically")
+    }
 
     val diffContent: String = githubApi.downloadDiff(prId)
 
@@ -53,7 +57,7 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
 
     git.clean()
 
-    (newPrComments, generalComment)
+    Right(newPrComments, generalComment)
   }
 
 

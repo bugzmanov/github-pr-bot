@@ -21,7 +21,8 @@ case class PullRequest(
   fromBranch: String,
   intoBranch: String,
   fromCommit: String,
-  toCommit: String
+  toCommit: String,
+  isMergeable: Boolean
 )
 
 case class Comment(
@@ -95,7 +96,8 @@ class GithubApi(account: String, val repo: String, header: String, username: Str
       fromBranch = from.getString("ref"),
       intoBranch = to.getString("ref"),
       fromCommit = from.getString("sha"),
-      toCommit = to.getString("sha")
+      toCommit = to.getString("sha"),
+      isMergeable = json.getBoolean("mergeable")
     )
   }
 
