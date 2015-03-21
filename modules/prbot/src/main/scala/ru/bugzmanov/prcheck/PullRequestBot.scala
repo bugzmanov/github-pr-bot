@@ -46,8 +46,8 @@ class PullRequestBot(token: String, botName: String) {
     
     val (commitComment, generalComment) = reviewer.collectReviewComments(githubApi, prNumber)
     commitComment.foreach { c =>
-      githubApi.publishCommentFake(prNumber, c.body, c.commitId, c.path, c.lineNumber)
+      githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
     }
-    githubApi.publishPrCommentFake(prNumber, generalComment)
+    githubApi.publishPrComment(prNumber, generalComment)
   }
 }

@@ -13,6 +13,7 @@ libraryDependencies ++= Seq(
   //  "org.codehaus.sonar-plugins.java" % "sonar-java-plugin" % "3.0",
   "com.jcabi" % "jcabi-github" % "0.21.3",
   "org.eclipse.jgit" % "org.eclipse.jgit" % "3.7.0.201502260915-r",
+  "ch.qos.logback" % "logback-classic" % "1.1.2",
   "org.scalatest" %% "scalatest" % "2.1.3" % "test",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.1" % "test"
 )

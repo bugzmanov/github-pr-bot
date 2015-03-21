@@ -2,14 +2,19 @@ package ru.bugzmanov.prcheck
 
 import java.io.File
 
+import org.slf4j.LoggerFactory
 import ru.bugzmanov.prcheck.checks.{CheckstyleExecutor, ViolationChecker}
 
 class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
+
+  val logger = LoggerFactory.getLogger("CodeReviewer")
 
   def collectReviewComments(githubApi: GithubApi, prNumber: Int): (Vector[Comment], String) = {
     val tmpDir: String = s"/tmp/github-${githubApi.repo}-${System.currentTimeMillis()}/"
     val prId: Int = prNumber.toInt
     val tmpDirFile: File = new File(tmpDir)
+
+    logger.debug(s"Downloading PR $prNumber diff")
 
     val pullRequest = githubApi.describePR(prId)
 
@@ -20,19 +25,23 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
         k => (new File(tmpDir + k.revised).getCanonicalPath, k)
       ).toMap
 
+    logger.debug(s"Clonning git repo for PR $prNumber")
     val git = githubApi.cloneTo(tmpDirFile, pullRequest.fromBranch)
 
+    logger.debug(s"Running violation checkers for PR $prNumber")
     val violations = checkers.flatMap { check =>
       check.execute(tmpDir, diffModel.keySet)
         .filter(issue => diffModel.get(issue.file).exists(_.isWithinRevisedVersion(issue.line)))
     }
 
-    val requiredPrComments = violations.groupBy(_.file).flatMap{ case (file, viols) =>
+    val requiredPrComments = violations.groupBy(_.file).flatMap { case (file, viols) =>
       val (tabChecks, other) = viols.partition(_.rule == CheckstyleExecutor.tabCheck)
-      other ++ Seq(tabChecks.head.copy(description = s"Achtung! ${tabChecks.size} lines with tab characters in this PR in this file"))
-    }.map {f =>
+      other ++ (if (tabChecks.nonEmpty)
+        Seq(tabChecks.head.copy(description = s"Achtung! ${tabChecks.size} lines with tab characters in this PR in this file"))
+      else Seq())
+    }.map { f =>
       val relativePath = f.file.substring(tmpDirFile.getCanonicalPath.size + 1)
-      Comment(prId, relativePath, f.line, pullRequest.fromCommit,  botuser, s"[${f.tag}] <${f.rule}> ${f.description}")
+      Comment(prId, relativePath, f.line, pullRequest.fromCommit, botuser, s"[${f.tag}] <${f.rule}> ${f.description}")
     }.toVector
 
     val newPrComments = {
