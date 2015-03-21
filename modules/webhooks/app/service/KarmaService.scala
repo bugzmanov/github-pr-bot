@@ -3,6 +3,7 @@ package service
 import ru.bugzmanov.prcheck.PullRequestBot
 
 import scala.util.Random
+import scala.util.matching.Regex
 
 class KarmaService(prbot: PullRequestBot, storage: SimpleStorage) {
 
@@ -12,9 +13,11 @@ class KarmaService(prbot: PullRequestBot, storage: SimpleStorage) {
   val karmaRise = ".*@(.+)\\+\\+.*".r
   val karmaFall = ".*@(.+)--.*".r
 
-  def handleKarma(url: String, expression: String) = {
+  def handleKarma(url: String, expression: String, commentAuthor: String) = {
     import Random.shuffle
     expression match {
+      case karmaRise(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, $username. ಠ_ಠ")
+      case karmaFall(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, $username. ಠ_ಠ")
       case karmaRise(username) =>
         val current = storage.get(username).map(_.toInt).getOrElse(0) + 1
         storage.put(username, current.toString)
