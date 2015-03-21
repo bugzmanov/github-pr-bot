@@ -10,12 +10,12 @@ class KarmaService(prbot: PullRequestBot, storage: SimpleStorage) {
   val UpVoteMessage = Seq("leveled up!", "is on the rise!", "+1!", "gained a level!")
   val DownVoteMessage = Seq("lost a level.", "took a hit! Ouch.", "took a hit.", "lost a life.")
 
-  val karmaRise = ".*@(.+)\\+\\+.*".r
-  val karmaFall = ".*@(.+)--.*".r
+  val karmaRise = "(?s).*@(.+)\\+\\+.*".r
+  val karmaFall = "(?s).*@(.+)--.*".r
 
   def handleKarma(url: String, expression: String, commentAuthor: String) = {
     import Random.shuffle
-    expression match {
+    expression.replaceAll("\n", " ") match {
       case karmaRise(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, @$username. ಠ_ಠ")
       case karmaFall(username) if username == commentAuthor => prbot.publishComment(url, s"Nice try, @$username. ಠ_ಠ")
       case karmaRise(username) =>
