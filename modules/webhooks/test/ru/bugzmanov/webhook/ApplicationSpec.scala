@@ -8,39 +8,136 @@ import org.scalatestplus.play._
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Request, AnyContentAsJson}
 import play.api.test._
-import service.ReviewService
+import service.{JiraLinkerService, KarmaService, ReviewService}
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import org.mockito.Mockito._
 import org.mockito.Matchers._
+import scala.language.postfixOps
 
 class ApplicationSpec extends PlaySpec with MockitoSugar {
 
+  trait MockContext {
+    val reviewService = mock[ReviewService]
+    val karmaService = mock[KarmaService]
+    val jiraLinker = mock[JiraLinkerService]
+    val botusername =  "bot"
+  }
+
   "WebHookController" should  {
-    "call reviewAsync as result of pull_request/create event" in {
+    "call reviewAsync as result of pull_request create event" in {
+      val controller = new GithubWebHookController with MockContext
 
-      val service = mock[ReviewService]
+      when(controller.reviewService.reviewAsync(any())).thenReturn(Right("ok"))
 
-      val controller = new GithubWebHookController {
-        override def reviewService: ReviewService = service
-      }
-
-      val parse: JsValue = Json.parse( """{"action": "opened",  "number": 666, "pull_request" : { "url": "localhost" } }""")
-      val request = new FakeRequest("POST", "blbasd", FakeHeaders(Seq()), parse)
+      val payload = Json.parse(
+        """
+          |{
+          |  "action": "opened",
+          |  "number": 666,
+          |  "pull_request" : {
+          |    "url": "localhost",
+          |    "title": "blabla"
+          |   }
+          |}""".stripMargin)
+      val request = new FakeRequest("POST", "blbasd", FakeHeaders(Seq()), payload)
         .withHeaders(
           ("content-type", "application/json"),
-          ("User-Agent", "GitHub-Hookshot/9f39283"),
-          ("X-GitHub-Delivery", "769e1d00-c6a3-11e4-8e93-3745994ca473"),
-          ("X-GitHub-Event", "pull_request"),
-          ("X-Hub-Signature", "sha1=0262bc242ea8becaff4aa16dce5c612cd66a9519"))
+          ("X-GitHub-Event", "pull_request"))
 
       val result  = controller.incoming().apply(request)
-
       val mvcResult = Await.result(result, 10 milli)
-
       mvcResult.header.status mustBe 200
-      verify(service).reviewAsync(PullRequest("opened", 666, "localhost"))
+
+      verify(controller.reviewService).reviewAsync(PullRequest("opened", 666, "localhost"))
+    }
+
+    "recognise '@bot please review' command" in {
+
+      val controller = new GithubWebHookController with MockContext
+      when(controller.reviewService.reviewAsync(any())).thenReturn(Right("ok"))
+
+      val payload = Json.parse(
+        """{
+          |"action": "created",
+          |"comment": {"body": "@bot please review" },
+          |"issue": {
+          |    "number": 666,
+          |   "pull_request" : { "url": "localhost" } }
+          |}
+          |"""stripMargin)
+
+      val request = new FakeRequest("POST", "blbasd", FakeHeaders(Seq()), payload)
+        .withHeaders(
+          ("content-type", "application/json"),
+          ("X-GitHub-Event", "issue_comment")
+        )
+
+      val result  = controller.incoming().apply(request)
+      val mvcResult = Await.result(result, 10 milli)
+      mvcResult.header.status mustBe 200
+
+      verify(controller.reviewService).reviewAsync(PullRequest("same", 666, "localhost"))
+    }
+
+    "recognise '@bot clean the mess' command" in {
+      val controller = new GithubWebHookController with MockContext
+
+      val payload = Json.parse(
+        """{
+          |  "action": "created",
+          |  "comment": {
+          |   "body": "@bot clean the mess",
+          |   "user": {"login": "bugzmanov"}
+          |  },
+          |  "issue": {
+          |    "pull_request" : { "url": "http://api.localhost/" }
+          |  }
+          |}
+          |"""stripMargin)
+
+      val request = new FakeRequest("POST", "blbasd", FakeHeaders(Seq()), payload)
+        .withHeaders(
+          ("content-type", "application/json"),
+          ("X-GitHub-Event", "issue_comment")
+        )
+
+      val result  = controller.incoming().apply(request)
+      val mvcResult = Await.result(result, 10 milli)
+      mvcResult.header.status mustBe 200
+
+      verify(controller.reviewService).removeRobotReviewComments("http://api.localhost/")
+    }
+
+    "ignore any other comments, but look for karma management" in {
+
+      val controller = new GithubWebHookController with MockContext
+
+      val payload = Json.parse(
+        """{
+          |"action": "created",
+          |"comment": {
+          |   "body": "@bot do some stuff",
+          |   "user": {"login": "bugzmanov"}
+          | },
+          |"issue": {
+          |   "pull_request" : { "url": "http://api.localhost/" } }
+          |}
+          |"""stripMargin)
+
+      val request = new FakeRequest("POST", "blbasd", FakeHeaders(Seq()), payload)
+        .withHeaders(
+          ("content-type", "application/json"),
+          ("X-GitHub-Event", "issue_comment")
+        )
+      val result  = controller.incoming().apply(request)
+      val mvcResult = Await.result(result, 10 milli)
+      mvcResult.header.status mustBe 200
+
+      verifyZeroInteractions(controller.reviewService)
+
+      verify(controller.karmaService).handleKarma("http://api.localhost/",  "@bot do some stuff", "bugzmanov")
     }
   }
 }

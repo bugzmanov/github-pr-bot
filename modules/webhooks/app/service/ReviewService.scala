@@ -14,7 +14,7 @@ class ReviewService(prbot: PullRequestBot) {
 
   val executors = Executors.newFixedThreadPool(5)
 
-  def reviewAsync(pr: PullRequest) = {
+  def reviewAsync(pr: PullRequest): Either[String, String] = {
     if (!processing.containsKey(pr.number)) {
       executors.submit(new Runnable() {
         override def run(): Unit = {
@@ -30,6 +30,9 @@ class ReviewService(prbot: PullRequestBot) {
           }
         }
       })
+      Right("Code review process scheduled")
+    } else {
+      Left(s"Code review for pr ${pr.url} is already scheduled")
     }
   }
 

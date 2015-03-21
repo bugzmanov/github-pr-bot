@@ -3,7 +3,6 @@ package service
 import ru.bugzmanov.prcheck.PullRequestBot
 
 import scala.util.Random
-import scala.util.matching.Regex
 
 class KarmaService(prbot: PullRequestBot, storage: SimpleStorage) {
 

@@ -46,14 +46,17 @@ class PullRequestBot(token: String, botName: String) {
 
   def makeReview(prNumber: Int, githubApi: GithubApi): Unit = {
     reviewer.collectReviewComments(githubApi, prNumber) match {
-      case Left(error) => githubApi.publishPrComment(prNumber, error)
+      case Left(error) => githubApi.publishPrCommentFake(prNumber, error)
 
       case Right((commitComment, generalComment)) =>
         commitComment.foreach { c =>
           try{
+
             githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
           } catch {
-            case e: AssertionError => logger.error(s"Failed to publish comment: $c", e)
+            case e: AssertionError =>
+              logger.error(s"Failed to publish comment: $c", e)
+              throw e
           }
         }
         githubApi.publishPrComment(prNumber, generalComment)
