@@ -43,7 +43,7 @@ trait GithubWebHookController extends Controller {
     action.collect { case "created" =>
       (request.body \ "issue" \ "pull_request" \ "url").asOpt[String].map { url =>
         val commentBody = (request.body \ "comment" \ "body").as[String]
-        val author = (request.body \ "issue" \ "user" \ "login").as[String]
+        val author = (request.body \ "comment" \ "user" \ "login").as[String]
         karmaService.handleKarma(url, commentBody, author)
 
         if (commentBody.trim == s"@$botusername clean the mess") {
