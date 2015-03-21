@@ -51,7 +51,7 @@ class PullRequestBot(token: String, botName: String) {
       try{
         githubApi.publishComment(prNumber, c.body, c.commitId, c.path, c.lineNumber)
       } catch {
-        case e: Exception => logger.error(s"Failed to publish comment: $c", e)
+        case e: AssertionError => logger.error(s"Failed to publish comment: $c", e)
       }
     }
     githubApi.publishPrComment(prNumber, generalComment)
