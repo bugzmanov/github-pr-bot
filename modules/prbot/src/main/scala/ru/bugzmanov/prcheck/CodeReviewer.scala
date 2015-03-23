@@ -20,6 +20,8 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
 
     val diffContent: String = githubApi.downloadDiff(prId)
 
+    println("---------\n" + diffContent + "\n----------------")
+
     val diffModel: Map[String, Patch] = DiffParser.
       parseMultiDiff(diffContent.split("\n").toList).map(
         k => (new File(tmpDir + k.revised).getCanonicalPath, k)
