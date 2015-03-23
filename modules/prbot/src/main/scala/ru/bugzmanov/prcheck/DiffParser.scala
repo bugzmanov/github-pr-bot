@@ -12,7 +12,6 @@ case class Chunk(position: Int, lines: Vector[(String, Int)]) {
 
 sealed trait Delta {
   def original: Chunk
-
   def revised: Chunk
 }
 
@@ -59,8 +58,7 @@ object DiffParser {
   private val revisedFileNameR = "\\+\\+\\+ b/(.*)".r
 
   def parseMultiDiff(diff: List[String]): List[Patch] = {
-    val span: List[List[String]] = diff.multiSpan(_.startsWith("diff --git")).dropWhile(_.size == 1)
-
+    val span = diff.dropWhile(!_.startsWith("diff --git")).multiSpan(_.startsWith("diff --git")).dropWhile(_.size == 1)
     span.map(parseUnifiedDiff)
   }
 

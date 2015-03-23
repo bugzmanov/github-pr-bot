@@ -120,46 +120,4 @@ class ParserTest extends FlatSpec {
     patch.mapToDiffPosition(28) should be (1)
     patch.mapToDiffPosition(101) should be (12)
   }
-
-  "massiveTest" should "work" in {
-    val diff =
-      """
-        |diff --git a/src/main/java/com/textmagic/sms/TextMagicMessageService.java b/src/main/java/com/textmagic/sms/TextMagicMessageService.java
-        |index e9a8332..07b694d 100644
-        |--- a/src/main/java/com/textmagic/sms/TextMagicMessageService.java
-        |+++ b/src/main/java/com/textmagic/sms/TextMagicMessageService.java
-        |@@ -28,7 +28,8 @@
-        |  *
-        |  * @author Rafael Bagmanov
-        |  */
-        |-public class TextMagicMessageService implements MessageService {
-        |+public class TextMagicMessageService implements MessageService
-        |+{
-        |
-        |     // universal constants
-        |     private static final int MAX_SMS_PARTS_COUNT = 3;
-        |@@ -99,7 +100,8 @@ public void setParser(TextMagicResponseParser parser) {
-        |      */
-        |     public SentMessage send(String text, String phone) throws ServiceBackendException, ServiceTechnicalException{
-        |         List<SentMessage> list = send(text, Arrays.asList(phone));
-        |-        if (list.size() != 1) {
-        |+        if (list.size() != 1)
-        |+	{
-        |             throw new ServiceTechnicalException("The server response is unexpected. " +
-        |                     "The response object was not populated with single result: [" + Arrays.toString(list.toArray()) + "]");
-        |         }
-        |@@ -177,7 +179,8 @@ public SentMessage send(String text, String phone) throws ServiceBackendExceptio
-        |         if(maxLength > 3 || maxLength < 1) {
-        |             throw new IllegalArgumentException("maxLength value is invalid");
-        |         }
-        |-        if (sendingTime.getTime() < System.currentTimeMillis()) {
-        |+        if (sendingTime.getTime() < System.currentTimeMillis())
-        |+{
-        |             throw new IllegalArgumentException("Provided sendingTime value [" + sendingTime.toString() + "] is in the past");
-        |         }
-        |         boolean useUnicode = !GsmCharsetUtil.isLegalString(text);
-      """.stripMargin
-
-    val patch: Patch = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
-  }
 }
