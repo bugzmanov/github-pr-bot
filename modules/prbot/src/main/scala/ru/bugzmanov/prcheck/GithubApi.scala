@@ -29,22 +29,22 @@ case class Comment(
   id: Int,
   prId: Int,
   path: String,
-  lineNumber: Int,
+  position: Int,
   commitId: String,
   author: String,
   body: String
 ) {
 
-  val uniqueKey = s"$path:$lineNumber:$body"
+  val uniqueKey = s"$path:$position:$body"
 }
 
 object Comment {
   def apply(prId: Int,
             path: String,
-            lineNumber: Int,
+            position: Int,
             commitId: String,
             author: String,
-            body: String) = new Comment(0, prId, path, lineNumber, commitId, author, body)
+            body: String) = new Comment(0, prId, path, position, commitId, author, body)
 
 }
 
@@ -127,7 +127,7 @@ class GithubApi(account: String, val repo: String, header: String, username: Str
             id = next.number(),
             prId = prId,
             path = next.json().getString("path"),
-            lineNumber = next.json().getInt("position"),
+            position = next.json().getInt("position"),
             commitId = next.json().getString("commit_id"),
             author = next.json().getJsonObject("user").getString("login"),
             body = next.json().getString("body"))

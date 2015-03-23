@@ -18,10 +18,6 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
 
     val pullRequest = githubApi.describePR(prId)
 
-    if(!pullRequest.isMergeable) {
-      return Left("Sorry can't review request that can't be merged automatically")
-    }
-
     val diffContent: String = githubApi.downloadDiff(prId)
 
     val diffModel: Map[String, Patch] = DiffParser.
@@ -39,13 +35,14 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
     }
 
     val requiredPrComments = violations.groupBy(_.file).flatMap { case (file, viols) =>
-      val (tabChecks, other) = viols.partition(_.rule == CheckstyleExecutor.tabCheck)
+      val (tabChecks, other) = viols.partition(_.rule == CheckstyleExecutor.tabCheck) // to prevent massive comments about tabs
       other ++ (if (tabChecks.nonEmpty)
         Seq(tabChecks.head.copy(description = s"Achtung! ${tabChecks.size} lines with tab characters in this PR in this file"))
       else Seq())
     }.map { f =>
       val relativePath = f.file.substring(tmpDirFile.getCanonicalPath.size + 1)
-      Comment(prId, relativePath, f.line, pullRequest.fromCommit, botuser, s"[${f.tag}] ${f.description}")
+      val position = diffModel(f.file).mapToDiffPosition(f.line)
+      Comment(prId, relativePath, position, pullRequest.fromCommit, botuser, s"[${f.tag}] ${f.description}")
     }.toVector
 
     val newPrComments = {
@@ -53,7 +50,11 @@ class CodeReviewer(botuser: String, checkers: Seq[ViolationChecker]) {
       requiredPrComments.filterNot(c => oldBotComments.contains(c.uniqueKey))
     }
 
-    val generalComment = createGeneralComment(pullRequest, git, tmpDir, diffModel.keySet)
+    val generalComment = if (pullRequest.isMergeable) {
+      createGeneralComment(pullRequest, git, tmpDir, diffModel.keySet)
+    } else {
+      "Can't calculate violations diff because pull request can't be merged automatically"
+    }
 
     git.clean()
 

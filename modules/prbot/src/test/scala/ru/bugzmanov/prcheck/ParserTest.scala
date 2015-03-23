@@ -25,48 +25,48 @@ class ParserTest extends FlatSpec {
       |
     """.stripMargin
 
+  def trimLine: PartialFunction[(String, Int), String] = { case (line: String, position: Int) => line.trim }
+
   "A parser" should "should recognise file name in diff" in {
-    val Patch(_, original, revised, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    val Patch(original, revised, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
     assert(original === "src/main/java/com/EntityImpl.java", "Original File name extracted from diff")
     assert(revised === "src/main/java/com/EntityImpl.java", "revised File name extracted from diff")
   }
 
   "A parser" should "recognise single block of changes" in {
-    val Patch(revision, original, revised, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    val Patch(original, revised, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
     deltas should have size (1)
 
     deltas.head.original.position should be (originalPosition)
     deltas.head.revised.position should be (revisedPosition)
-    revision should be (revisedSHA)
-
   }
 
   "Original chunk" should "contain deleted part" in {
-    val Patch(_, _, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
-    deltas.head.original.lines.map(_.trim) should contain("public void setAdvEntityId(long id){")
+    val Patch(_, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    deltas.head.original.lines.map(trimLine) should contain("public void setAdvEntityId(long id){")
   }
 
   "Revised chunk" should "not contain deleted part" in {
-    val Patch(_, _, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
-    deltas.head.revised.lines.map(_.trim) should not contain "public void setAdvEntityId(long id){"
+    val Patch(_, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    deltas.head.revised.lines.map(trimLine) should not contain "public void setAdvEntityId(long id){"
   }
 
   "Original chunk" should "not contain new part" in {
-    val Patch(_ ,_, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
-    deltas.head.original.lines.map(_.trim) should not contain "public EntityImpl setAdvEntityId(long id){"
-    deltas.head.original.lines.map(_.trim) should not contain "return this;"
+    val Patch(_, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    deltas.head.original.lines.map(trimLine) should not contain "public EntityImpl setAdvEntityId(long id){"
+    deltas.head.original.lines.map(trimLine) should not contain "return this;"
   }
 
   "Revised chunk" should  "contain new part" in {
-    val Patch(_, _, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
-    deltas.head.revised.lines.map(_.trim) should contain ("public EntityImpl setAdvEntityId(long id){")
-    deltas.head.revised.lines.map(_.trim) should contain ("return this;")
+    val Patch(_, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    deltas.head.revised.lines.map(trimLine) should contain ("public EntityImpl setAdvEntityId(long id){")
+    deltas.head.revised.lines.map(trimLine) should contain ("return this;")
   }
 
   "Revised and original chunks" should "contain unmodified parts" in {
-    val Patch(_, _, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
-    deltas.head.revised.lines.map(_.trim) should contain ("this.advEntityId=id;")
-    deltas.head.original.lines.map(_.trim) should contain ("this.advEntityId=id;")
+    val Patch(_, _, deltas) = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    deltas.head.revised.lines.map(trimLine) should contain ("this.advEntityId=id;")
+    deltas.head.original.lines.map(trimLine) should contain ("this.advEntityId=id;")
   }
 
   "a parser" should "recognise several deltas" in {
@@ -78,11 +78,47 @@ class ParserTest extends FlatSpec {
         |+ ne_albalb
       """.stripMargin
 
-    val Patch(_, _, _, deltas) = DiffParser.parseUnifiedDiff(largeDiff.split("\n").toList)
+    val Patch(_, _, deltas) = DiffParser.parseUnifiedDiff(largeDiff.split("\n").toList)
     deltas should have size (2)
 
-    deltas(1).original.lines.map(_.trim) should contain("blabla")
-    deltas(1).revised.lines.map(_.trim) should contain("ne_albalb")
+    deltas(1).original.lines.map(trimLine) should contain("blabla")
+    deltas(1).revised.lines.map(trimLine) should contain("ne_albalb")
+  }
+
+
+  "Patch" should "be able to map line number back to index" in {
+    val diff =
+      """
+        |diff --git a/src/main/java/com/textmagic/sms/TextMagicMessageService.java b/src/main/java/com/textmagic/sms/TextMagicMessageService.java
+        |index e9a8332..07b694d 100644
+        |--- a/src/main/java/com/textmagic/sms/TextMagicMessageService.java
+        |+++ b/src/main/java/com/textmagic/sms/TextMagicMessageService.java
+        |@@ -28,7 +28,8 @@
+        |  *
+        |  * @author Rafael Bagmanov
+        |  */
+        |-public class TextMagicMessageService implements MessageService {
+        |+public class TextMagicMessageService implements MessageService
+        |+{
+        |
+        |     // universal constants
+        |     private static final int MAX_SMS_PARTS_COUNT = 3;
+        |@@ -99,7 +100,8 @@ public void setParser(TextMagicResponseParser parser) {
+        |      */
+        |     public SentMessage send(String text, String phone) throws ServiceBackendException, ServiceTechnicalException{
+        |         List<SentMessage> list = send(text, Arrays.asList(phone));
+        |-        if (list.size() != 1) {
+        |+        if (list.size() != 1)
+        |+	{
+        |             throw new ServiceTechnicalException("The server response is unexpected. " +
+        |                     "The response object was not populated with single result: [" + Arrays.toString(list.toArray()) + "]");
+        |   }
+        |
+      """.stripMargin
+
+    val patch: Patch = DiffParser.parseUnifiedDiff(diff.split("\n").toList)
+    patch.mapToDiffPosition(28) should be (1)
+    patch.mapToDiffPosition(101) should be (12)
 
   }
 }

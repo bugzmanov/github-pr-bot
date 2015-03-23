@@ -38,16 +38,13 @@ class KarmaServiceSpec extends FlatSpec  with MockitoSugar  {
     storage.get("user") should be (Some("-1"))
   }
 
-  "Karma service" should "not allow user to modify his own karma" in {
+  "Karma service" should "not allow user to rise his own karma" in {
     val storage  = simpleStorage
     val karmaService = new KarmaService(mock[PullRequestBot], storage)
 
     storage.put("user", "1")
 
     karmaService.handleKarma(url, "hey @user++", "user")
-    storage.get("user") should be (Some("1"))
-
-    karmaService.handleKarma(url, "hey @user--", "user")
     storage.get("user") should be (Some("1"))
   }
 
