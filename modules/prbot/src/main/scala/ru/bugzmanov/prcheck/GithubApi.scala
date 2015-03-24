@@ -1,14 +1,13 @@
 package ru.bugzmanov.prcheck
 
-import java.io.{ByteArrayInputStream, StringBufferInputStream, File}
+import java.io.File
 import java.net.HttpURLConnection
-import java.util
-import javax.json.JsonObject
+import javax.json.{JsonValue, JsonObject}
 import javax.ws.rs.core.{HttpHeaders, MediaType}
 import javax.xml.bind.DatatypeConverter
 
 import com.jcabi.github.Coordinates.Simple
-import com.jcabi.github.{Pull, PullComment, RtGithub}
+import com.jcabi.github.{PullComment, RtGithub}
 import com.jcabi.http.Request
 import com.jcabi.http.request.ApacheRequest
 import com.jcabi.http.response.{JsonResponse, RestResponse}
@@ -91,13 +90,14 @@ class GithubApi(account: String, val repo: String, header: String, username: Str
     val from: JsonObject = json.getJsonObject("head")
 
     val to: JsonObject = json.getJsonObject("base")
+
     new PullRequest(
       author = json.getJsonObject("user").getString("login"),
       fromBranch = from.getString("ref"),
       intoBranch = to.getString("ref"),
       fromCommit = from.getString("sha"),
       toCommit = to.getString("sha"),
-      isMergeable = json.getBoolean("mergeable")
+      isMergeable = json.get("mergeable") != JsonValue.NULL && json.getBoolean("mergeable")
     )
   }
 

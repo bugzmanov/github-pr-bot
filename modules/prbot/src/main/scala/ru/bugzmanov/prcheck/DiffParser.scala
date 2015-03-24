@@ -6,7 +6,7 @@ import scala.annotation.tailrec
 
 
 case class Chunk(position: Int, lines: Vector[(String, Int)]) {
-  def containsLine(lineNumber: Int) = lineNumber >= position && lineNumber <= lines.size + position
+  def containsLine(lineNumber: Int) = lineNumber >= position && lineNumber < lines.size + position
   def mapToPosition(lineNumber: Int) = lines(lineNumber - position)._2
 }
 
