@@ -21,6 +21,7 @@ case class PullRequest(
   intoBranch: String,
   fromCommit: String,
   toCommit: String,
+  body: String,
   isMergeable: Boolean
 )
 
@@ -97,6 +98,7 @@ class GithubApi(account: String, val repo: String, header: String, username: Str
       intoBranch = to.getString("ref"),
       fromCommit = from.getString("sha"),
       toCommit = to.getString("sha"),
+      body = json.getString("body"),
       isMergeable = json.get("mergeable") != JsonValue.NULL && json.getBoolean("mergeable")
     )
   }
@@ -137,7 +139,7 @@ class GithubApi(account: String, val repo: String, header: String, username: Str
     vector.result()
   }
 
-  def cleanCommitComments(comments: Vector[Comment]) = {
+  def cleanCommitComments(comments: Vector[Comment]): Unit = {
     comments.foreach { c =>
       try {
         github.entry().uri().path(s"repos/$account/$repo/pulls/comments/${c.id}}").back()
@@ -149,6 +151,16 @@ class GithubApi(account: String, val repo: String, header: String, username: Str
       }
     }
   }
+
+  def updatePullRequestDescription(prNumber: Int, description: String): Unit = {
+    val normalisedDesc = description.replaceAll("\"", "\'").replaceAll("\n", "<br/>")
+    github.entry()
+      .uri().path(s"repos/$account/$repo/pulls/$prNumber").back()
+      .method(Request.PATCH)
+      .body().set(s"""{ "body": "$normalisedDesc" }""").back().fetch().as(classOf[RestResponse])
+      .assertStatus(HttpStatus.SC_OK)
+  }
+
 }
 
 object GithubApi {
