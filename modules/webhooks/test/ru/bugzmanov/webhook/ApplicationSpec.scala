@@ -1,19 +1,16 @@
 package ru.bugzmanov.webhook
 
-import javax.json.JsonValue
-
-import controllers.{PullRequest, GithubWebHookController}
+import controllers.{GithubWebHookController, PullRequest}
+import org.mockito.Matchers._
+import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play._
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Request, AnyContentAsJson}
+import play.api.libs.json.Json
 import play.api.test._
 import service.{JiraLinkerService, KarmaService, ReviewService}
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import org.mockito.Mockito._
-import org.mockito.Matchers._
 import scala.language.postfixOps
 
 class ApplicationSpec extends PlaySpec with MockitoSugar {

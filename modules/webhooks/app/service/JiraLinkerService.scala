@@ -10,7 +10,7 @@ class JiraLinkerService(prbot: PullRequestBot, projectCodes: Set[String], jiraUr
     title match {
       case reg(ticket, number) if projectCodes.contains(ticket.toUpperCase) =>
         val ticketUrl: String = s"$jiraUrl/$ticket-$number"
-        prbot.updateDescriprtion(url, s"""link to jira: <a href="$ticketUrl" target="_blank">$ticket-$number</a>""" )
+        prbot.addToDescriprtion(url, s"""Link to jira: <a href="$ticketUrl" target="_blank">$ticket-$number</a>""" )
       case _ => // do nothing
     }
   }

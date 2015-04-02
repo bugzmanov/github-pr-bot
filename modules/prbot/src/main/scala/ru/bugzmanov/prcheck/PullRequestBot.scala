@@ -12,10 +12,19 @@ class PullRequestBot(token: String, botName: String) {
 
   val reviewer = new CodeReviewer(botName, Seq(PMDExecutor, CheckstyleExecutor))
 
-  def updateDescriprtion(url: String, description: String) = {
+  def addToDescriprtion(url: String, description: String) = {
     val pullRequestApi(account, repo, prNumber) = url
-    val githubApi: GithubApi = GithubApi.tokenBased(account, repo, token)
-    githubApi.publishPrComment(prNumber.toInt, description)
+    val githubApi = GithubApi.tokenBased(account, repo, token)
+
+    try {
+      val pr = githubApi.describePR(prNumber.toInt)
+      val updatedBody = if (pr.body.isEmpty) description else s"${pr.body}\n$description"
+      githubApi.updatePullRequestDescription(prNumber.toInt, updatedBody)
+    } catch {
+      case e: AssertionError =>
+        logger.warn(s"Couldn't update PR body $url", e)
+        githubApi.publishPrComment(prNumber.toInt, description)
+    }
   }
 
   def removeComments(url: String) = {
