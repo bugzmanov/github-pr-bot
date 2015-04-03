@@ -19,11 +19,11 @@ object PMDExecutor extends ViolationChecker {
 
   val description = "PMD"
   
-  def execute(inputPath: String, fileFilter: Set[String] = Set()): Vector[ViolationIssue] = {
+  def execute(inputPath: String, filesWhitelist: Set[String] = Set()): Vector[ViolationIssue] = {
     val ruleSetFactory = new RuleSetFactory
 
     val languages: Set[Language] = Set(new JavaLanguageModule)
-    val files = getApplicableFiles(inputPath, languages, fileFilter)
+    val sourceFiles = getApplicableFiles(inputPath, languages, filesWhitelist)
 
     val renderer = new net.sourceforge.pmd.renderers.CSVRenderer()
 
@@ -55,7 +55,7 @@ object PMDExecutor extends ViolationChecker {
       //        "rulesets/java/controversial.xml," +
       //        "rulesets/java/optimizations.xml," +
 
-    PMD.processFiles(configuration, ruleSetFactory, files, ctx, Collections.singletonList(renderer).asInstanceOf[java.util.List[Renderer]])
+    PMD.processFiles(configuration, ruleSetFactory, sourceFiles, ctx, Collections.singletonList(renderer).asInstanceOf[java.util.List[Renderer]])
     renderer.end()
     renderer.flush()
     writer.getBuffer.toString.split("\n").toVector.tail.map(PMDIssue(_)).filterNot(f=> f.file.contains("src/test")
@@ -63,14 +63,14 @@ object PMDExecutor extends ViolationChecker {
       || f.rule == "JUnitTestsShouldIncludeAssert" || f.rule == "JUnitSpelling"))
   }
 
-  def getApplicableFiles(inputPath: String, languages: Set[Language], fileFilter: Set[String]): java.util.List[DataSource] = {
+  def getApplicableFiles(inputPath: String, languages: Set[Language], filesWhitelist: Set[String]): java.util.List[DataSource] = {
     val fileSelector: LanguageFilenameFilter = new LanguageFilenameFilter(languages)
     FileUtil.collectFiles(inputPath, new AbstractFileFilter {
 
       fileSelector
 
       override def accept(file: File): Boolean = {
-        fileSelector.accept(file.getParentFile, file.getName) && (fileFilter.isEmpty || fileFilter.contains(file.getCanonicalPath))
+        fileSelector.accept(file.getParentFile, file.getName) && (filesWhitelist.isEmpty || filesWhitelist.contains(file.getCanonicalPath))
       }
     })
   }
