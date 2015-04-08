@@ -13,19 +13,22 @@ class PmdExecutorSpec extends FlatSpec {
   val HelloWorldIssues = Seq("UseUtilityClass", "UseVarargs", "SystemPrintln", "NoPackage")
   val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
 
-  val BadHelloWorldCode =
-    """
-      |public class HelloWorld {
-      |
-      |    public static void main(String[] args) {
-      |        System.out.println("Hello, World");
-      |    }
-      |
-      |}
-    """.stripMargin
+  val BadHelloWorldCode = fromString(
+    name = "bad-hello-word",
+    contents = """
+    |public class HelloWorld {
+    |
+    |    public static void main(String[] args) {
+    |        System.out.println("Hello, World");
+    |    }
+    |}
+    |""".stripMargin
+  )
 
-  val GoodHelloWorldCode =
-    """
+  val GoodHelloWorldCode = fromString(
+    name = "good-hello-world",
+    contents =
+      """
       |package foo.bar;
       |
       |public final class HelloWorld {
@@ -35,29 +38,29 @@ class PmdExecutorSpec extends FlatSpec {
       |    public static void main(String ... args) {
       |        log.info("Hello, World");
       |    }
-      |
       |}
-    """.stripMargin
+      """.stripMargin
+  )
 
 
   "Pmd suite" should "report issues for problematic version of 'Hello world'" in {
-    val issues = executor.process(fromString(BadHelloWorldCode)).get
+    val issues = executor.process(BadHelloWorldCode).get
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
   }
   it should "remain silent for linted version of 'Hello world'" in {
-    val issues = executor.process(fromString(GoodHelloWorldCode)).get
+    val issues = executor.process(GoodHelloWorldCode).get
     issues shouldBe empty
   }
   it should "correctly process multiple files at once" in {
-    val issues = executor.process(fromString(BadHelloWorldCode), fromString(GoodHelloWorldCode)).get
+    val issues = executor.process(BadHelloWorldCode, GoodHelloWorldCode).get
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
   }
 }
 
 object AsDataSource {
   private final val Utf8 = Charset.forName("UTF-8")
-  def fromString(str: String): DataSource = new DataSource {
-    override def getNiceFileName(shortNames: Boolean, inputFileName: String): String = "made-from-string"
-    override def getInputStream: InputStream = new ByteArrayInputStream(str.getBytes(Utf8))
+  def fromString(name: String, contents: String): DataSource = new DataSource {
+    override def getNiceFileName(shortNames: Boolean, inputFileName: String): String = name
+    override def getInputStream: InputStream = new ByteArrayInputStream(contents.getBytes(Utf8))
   }
 }
