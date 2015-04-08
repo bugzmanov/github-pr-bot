@@ -48,7 +48,10 @@ class PmdExecutorSpec extends FlatSpec {
     val issues = executor.process(fromString(GoodHelloWorldCode)).get
     issues shouldBe empty
   }
-
+  it should "correctly process multiple files at once" in {
+    val issues = executor.process(fromString(BadHelloWorldCode), fromString(GoodHelloWorldCode)).get
+    issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
+  }
 }
 
 object AsDataSource {
