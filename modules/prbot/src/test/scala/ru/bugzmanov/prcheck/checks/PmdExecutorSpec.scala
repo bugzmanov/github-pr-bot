@@ -9,7 +9,11 @@ import org.scalatest.Matchers._
 
 
 class PmdExecutorSpec extends FlatSpec {
-  val HelloWorldCode =
+  import AsDataSource.fromString
+  val HelloWorldIssues = Seq("UseUtilityClass", "UseVarargs", "SystemPrintln", "NoPackage")
+  val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
+
+  val BadHelloWorldCode =
     """
       |public class HelloWorld {
       |
@@ -20,16 +24,31 @@ class PmdExecutorSpec extends FlatSpec {
       |}
     """.stripMargin
 
-  val HelloWorldIssues = Seq("UseUtilityClass", "UseVarargs", "SystemPrintln", "NoPackage")
-  val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
+  val GoodHelloWorldCode =
+    """
+      |package foo.bar;
+      |
+      |public final class HelloWorld {
+      |
+      |    private HelloWorld() { /* so PMD will think it's utility class */ }
+      |
+      |    public static void main(String ... args) {
+      |        log.info("Hello, World");
+      |    }
+      |
+      |}
+    """.stripMargin
 
-  "Pmd suite" should s"report issues for 'Hello world' code piece" in {
-    val issues = executor.process(AsDataSource.fromString(HelloWorldCode)).get
+
+  "Pmd suite" should "report issues for problematic version of 'Hello world'" in {
+    val issues = executor.process(fromString(BadHelloWorldCode)).get
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
   }
-  ignore should "yield errors if file is missing" in {
-
+  it should "remain silent for linted version of 'Hello world'" in {
+    val issues = executor.process(fromString(GoodHelloWorldCode)).get
+    issues shouldBe empty
   }
+
 }
 
 object AsDataSource {
