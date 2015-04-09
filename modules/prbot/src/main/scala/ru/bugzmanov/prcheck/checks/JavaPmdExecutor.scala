@@ -1,6 +1,7 @@
 package ru.bugzmanov.prcheck.checks
 
 import java.io.BufferedInputStream
+import javax.annotation.concurrent.NotThreadSafe
 
 import net.sourceforge.pmd._
 import net.sourceforge.pmd.lang.Language
@@ -9,6 +10,7 @@ import net.sourceforge.pmd.util.datasource.DataSource
 
 import scala.util.{Success, Try}
 
+@NotThreadSafe
 class JavaPmdExecutor private (config: PMDConfiguration) {
   val BlacklistedRules = Set("LawOfDemeter", "LongVariable", "AbstractNaming", "JUnitTestsShouldIncludeAssert", "JUnitSpelling")
   val ruleSetFactory = new RuleSetFactory

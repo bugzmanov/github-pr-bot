@@ -9,7 +9,7 @@ import org.scalatest.Matchers._
 
 
 class PmdExecutorSpec extends FlatSpec {
-  import AsDataSource.fromString
+  import StringDataSource.fromString
   val HelloWorldIssues = Seq("UseUtilityClass", "UseVarargs", "SystemPrintln", "NoPackage")
   val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
 
@@ -22,7 +22,7 @@ class PmdExecutorSpec extends FlatSpec {
     |        System.out.println("Hello, World");
     |    }
     |}
-    |""".stripMargin
+    """.stripMargin
   )
 
   val GoodHelloWorldCode = fromString(
@@ -57,7 +57,7 @@ class PmdExecutorSpec extends FlatSpec {
   }
 }
 
-object AsDataSource {
+private object StringDataSource {
   private final val Utf8 = Charset.forName("UTF-8")
   def fromString(name: String, contents: String): DataSource = new DataSource {
     override def getNiceFileName(shortNames: Boolean, inputFileName: String): String = name
