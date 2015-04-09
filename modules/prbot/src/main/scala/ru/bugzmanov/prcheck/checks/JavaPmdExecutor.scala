@@ -8,7 +8,7 @@ import net.sourceforge.pmd.lang.Language
 import net.sourceforge.pmd.lang.java.JavaLanguageModule
 import net.sourceforge.pmd.util.datasource.DataSource
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 @NotThreadSafe
 class JavaPmdExecutor private (config: PMDConfiguration) {
@@ -16,33 +16,37 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
   val ruleSetFactory = new RuleSetFactory
   val processor = new SourceCodeProcessor(config)
   val rules = RulesetsFactoryUtils.getRuleSets(config.getRuleSets, ruleSetFactory)
+  val ctx = new RuleContext
 
-  def process(sources: DataSource*): Try[Iterable[ViolationIssue]] = {
-    val reports = analyze(sources)
-    val issues = reports.flatMap { report => JavaPmdExecutor.asList(report.iterator()) }.map(JavaPmdExecutor.asIssue)
+  def analyze(source: DataSource): Try[Iterable[ViolationIssue]] = {
+    val report: Report = process(source)
 
-    val filtered = issues
-      .filterNot(isTestFile)
-      .filterNot(issue => BlacklistedRules.contains(issue.rule))
-
-    Success(filtered)
+    if (report.hasConfigErrors) {
+      Failure(???)
+    } else if(report.hasErrors) {
+      Failure(???)
+    } else {
+      val converted = JavaPmdExecutor.asList(report.iterator()).map(JavaPmdExecutor.asIssue)
+      Success(
+        converted
+        .filterNot(isTestFile)
+        .filterNot(issue => BlacklistedRules.contains(issue.rule))
+      )
+    }
   }
 
-  def isTestFile(vi: ViolationIssue) = vi.file.contains("src/test")
+  private def isTestFile(vi: ViolationIssue) = vi.file.contains("src/test")
 
-  private def analyze(sources: Iterable[DataSource]): Iterable[Report] = {
-    val ctx = new RuleContext
-    ctx.setLanguageVersion(null)
+  private def process(source: DataSource): Report = {
+    ctx.setLanguageVersion(null) // in original code, version is said to be unknown and should be auto derived
 
-    sources.map { source =>
-      val niceName = source.getNiceFileName(config.isReportShortNames, config.getInputPaths)
-      val report = PMD.setupReport(rules, ctx, niceName)
-      val bis = new BufferedInputStream(source.getInputStream)
-      rules.start(ctx)
-      processor.processSourceCode(bis, rules, ctx)
-      rules.end(ctx)
-      report
-    }
+    val niceName = source.getNiceFileName(config.isReportShortNames, config.getInputPaths)
+    val report = PMD.setupReport(rules, ctx, niceName)
+    val bis = new BufferedInputStream(source.getInputStream)
+    rules.start(ctx)
+    processor.processSourceCode(bis, rules, ctx)
+    rules.end(ctx)
+    report
   }
   
 }

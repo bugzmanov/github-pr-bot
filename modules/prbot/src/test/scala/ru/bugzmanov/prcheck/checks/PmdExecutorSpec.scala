@@ -44,15 +44,18 @@ class PmdExecutorSpec extends FlatSpec {
 
 
   "Pmd suite" should "report issues for problematic version of 'Hello world'" in {
-    val issues = executor.process(BadHelloWorldCode).get
+    val issues = executor.analyze(BadHelloWorldCode).get
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
   }
   it should "remain silent for linted version of 'Hello world'" in {
-    val issues = executor.process(GoodHelloWorldCode).get
+    val issues = executor.analyze(GoodHelloWorldCode).get
     issues shouldBe empty
   }
   it should "correctly process multiple files at once" in {
-    val issues = executor.process(BadHelloWorldCode, GoodHelloWorldCode).get
+    val issues = executor.analyze(BadHelloWorldCode).get
+    val noIssues = executor.analyze(GoodHelloWorldCode).get
+
+    noIssues shouldBe empty
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
   }
 }
