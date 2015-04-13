@@ -7,6 +7,7 @@ import net.sourceforge.pmd._
 import net.sourceforge.pmd.lang.Language
 import net.sourceforge.pmd.lang.java.JavaLanguageModule
 import net.sourceforge.pmd.util.datasource.DataSource
+import scala.collection.JavaConverters._
 
 import scala.util.{Failure, Success, Try}
 
@@ -18,7 +19,7 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
   val rules = RulesetsFactoryUtils.getRuleSets(config.getRuleSets, ruleSetFactory)
   val ctx = new RuleContext
 
-  def analyze(source: DataSource): Try[Iterable[ViolationIssue]] = {
+  def analyze(source: DataSource): Try[Vector[ViolationIssue]] = {
     val report: Report = process(source)
 
     if (report.hasConfigErrors) {
@@ -26,12 +27,13 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
     } else if(report.hasErrors) {
       Failure(???)
     } else {
-      val converted = JavaPmdExecutor.asList(report.iterator()).map(JavaPmdExecutor.asIssue)
-      Success(
-        converted
+      val scalified = report.iterator().asScala
+      val converted = scalified.map(JavaPmdExecutor.asIssue)
+      val filtered = converted
         .filterNot(isTestFile)
         .filterNot(issue => BlacklistedRules.contains(issue.rule))
-      )
+
+      Success(filtered.toVector)
     }
   }
 
@@ -52,17 +54,9 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
 }
 
 object JavaPmdExecutor {
-  private[JavaPmdExecutor] final val langs: Set[Language] = Set(new JavaLanguageModule)
+  private final val langs: Set[Language] = Set(new JavaLanguageModule)
 
-  private[JavaPmdExecutor] def asList[T](it: java.util.Iterator[T], acc: List[T] = Nil): List[T] = {
-    if (it.hasNext) {
-      asList(it, it.next::acc)
-    } else {
-      acc
-    }
-  }
-
-  private[JavaPmdExecutor] def asIssue(violation: RuleViolation): ViolationIssue = ViolationIssue(
+  private def asIssue(violation: RuleViolation) = ViolationIssue(
     classPackage = violation.getPackageName,
     file = violation.getFilename,
     priority = violation.getRule.getPriority.getPriority,
