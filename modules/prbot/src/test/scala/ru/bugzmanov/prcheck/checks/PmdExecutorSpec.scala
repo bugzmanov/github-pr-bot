@@ -41,6 +41,14 @@ class PmdExecutorSpec extends FlatSpec with TryValues {
       """.stripMargin
   )
 
+  val UnparseableCode = fromString(
+    name = "unparseable",
+    contents =
+      """
+        | blah blah
+      """.stripMargin
+  )
+
 
   "Pmd suite" should "report issues for problematic version of 'Hello world'" in {
     val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
@@ -67,6 +75,15 @@ class PmdExecutorSpec extends FlatSpec with TryValues {
     failure.exception match {
       case ex: IllegalArgumentException => ex.getMessage should startWith("Configuration errors:")
       case _ => fail("Expected IAS for misconfigured rules file")
+    }
+  }
+  it should "throw IllegalStateException in case of processing errors" in {
+    val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
+    val failure = executor.analyze(UnparseableCode).failure
+
+    failure.exception match {
+      case ex: IllegalStateException => ex.getMessage should startWith("Caught error(s) during processing: ")
+      case _ => fail("Expected RuntimeException for unparseable files")
     }
   }
 }

@@ -3,6 +3,7 @@ package ru.bugzmanov.prcheck.checks
 import java.io.BufferedInputStream
 import javax.annotation.concurrent.NotThreadSafe
 
+import net.sourceforge.pmd.Report.{RuleConfigurationError, ProcessingError}
 import net.sourceforge.pmd._
 import net.sourceforge.pmd.lang.Language
 import net.sourceforge.pmd.lang.java.JavaLanguageModule
@@ -23,10 +24,11 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
     val report: Report = process(source)
 
     if (report.hasConfigErrors) {
-      val errors = report.configErrors().asScala.mkString("{", ", ", "}")
+      val errors = report.configErrors().asScala.map(errToStr).mkString("{", ", ", "}")
       Failure(new IllegalArgumentException(s"Configuration errors: $errors"))
     } else if(report.hasErrors) {
-      Failure(???)
+      val errors = report.errors().asScala.map(_.getMsg).mkString("{", ", ", "}")
+      Failure(new IllegalStateException(s"Caught error(s) during processing: $errors"))
     } else {
       val scalified = report.iterator().asScala
       val converted = scalified.map(JavaPmdExecutor.asIssue)
@@ -38,6 +40,8 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
     }
   }
 
+  private def errToStr(x: RuleConfigurationError) = s"${x.rule().getName}:${x.issue()}"
+
   private def isTestFile(vi: ViolationIssue) = vi.file.contains("src/test")
 
   private def process(source: DataSource): Report = {
@@ -47,7 +51,11 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
     val report = PMD.setupReport(rules, ctx, niceName)
     val bis = new BufferedInputStream(source.getInputStream)
     rules.start(ctx)
-    processor.processSourceCode(bis, rules, ctx)
+    try {
+      processor.processSourceCode(bis, rules, ctx)
+    } catch {
+      case ex: Exception => report.addError(new ProcessingError(ex.getMessage, niceName))
+    }
     rules.end(ctx)
     report
   }
