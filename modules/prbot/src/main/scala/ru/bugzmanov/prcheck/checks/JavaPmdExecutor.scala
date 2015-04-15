@@ -23,7 +23,8 @@ class JavaPmdExecutor private (config: PMDConfiguration) {
     val report: Report = process(source)
 
     if (report.hasConfigErrors) {
-      Failure(???)
+      val errors = report.configErrors().asScala.mkString("{", ", ", "}")
+      Failure(new IllegalArgumentException(s"Configuration errors: $errors"))
     } else if(report.hasErrors) {
       Failure(???)
     } else {

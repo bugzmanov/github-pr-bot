@@ -4,14 +4,13 @@ import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.charset.Charset
 
 import net.sourceforge.pmd.util.datasource.DataSource
-import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
+import org.scalatest.{FlatSpec, TryValues}
 
 
-class PmdExecutorSpec extends FlatSpec {
+class PmdExecutorSpec extends FlatSpec with TryValues {
   import StringDataSource.fromString
   val HelloWorldIssues = Seq("UseUtilityClass", "UseVarargs", "SystemPrintln", "NoPackage")
-  val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
 
   val BadHelloWorldCode = fromString(
     name = "bad-hello-word",
@@ -44,19 +43,31 @@ class PmdExecutorSpec extends FlatSpec {
 
 
   "Pmd suite" should "report issues for problematic version of 'Hello world'" in {
-    val issues = executor.analyze(BadHelloWorldCode).get
+    val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
+    val issues = executor.analyze(BadHelloWorldCode).success.value
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
   }
   it should "remain silent for linted version of 'Hello world'" in {
-    val issues = executor.analyze(GoodHelloWorldCode).get
+    val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
+    val issues = executor.analyze(GoodHelloWorldCode).success.value
     issues shouldBe empty
   }
   it should "correctly process multiple files at once" in {
-    val issues = executor.analyze(BadHelloWorldCode).get
-    val noIssues = executor.analyze(GoodHelloWorldCode).get
+    val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
+    val issues = executor.analyze(BadHelloWorldCode).success.value
+    val noIssues = executor.analyze(GoodHelloWorldCode).success.value
 
     noIssues shouldBe empty
     issues.map(_.rule) should contain theSameElementsAs HelloWorldIssues
+  }
+  it should "throw IllegalArgumentException in case of configuration errors" in {
+    val executor = JavaPmdExecutor.fromRulesFile("broken_rules.xml")
+    val failure = executor.analyze(GoodHelloWorldCode).failure
+
+    failure.exception match {
+      case ex: IllegalArgumentException => ex.getMessage should startWith("Configuration errors:")
+      case _ => fail("Expected IAS for misconfigured rules file")
+    }
   }
 }
 
