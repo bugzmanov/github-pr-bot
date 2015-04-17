@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 
 @NotThreadSafe
 class JavaPmdExecutor private (config: PMDConfiguration) {
-  val BlacklistedRules = Set("LawOfDemeter", "LongVariable", "AbstractNaming", "JUnitTestsShouldIncludeAssert", "JUnitSpelling")
+  val BlacklistedRules = Set("LongVariable", "AbstractNaming", "JUnitTestsShouldIncludeAssert", "JUnitSpelling")
   val ruleSetFactory = new RuleSetFactory
   val processor = new SourceCodeProcessor(config)
   val rules = RulesetsFactoryUtils.getRuleSets(config.getRuleSets, ruleSetFactory)
