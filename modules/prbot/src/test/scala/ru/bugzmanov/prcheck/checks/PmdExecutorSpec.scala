@@ -60,6 +60,11 @@ class PmdExecutorSpec extends FlatSpec with TryValues {
     val issues = executor.analyze(GoodHelloWorldCode).success.value
     issues shouldBe empty
   }
+  it should "report only issues mentioned in xml config" in {
+    val executor = JavaPmdExecutor.fromRulesFile("only_logging_rule.xml")
+    val issues = executor.analyze(BadHelloWorldCode).success.value
+    issues.map(_.rule) should equal (Seq("SystemPrintln"))
+  }
   it should "correctly process multiple files at once" in {
     val executor = JavaPmdExecutor.fromRulesFile("pmd_rules.xml")
     val issues = executor.analyze(BadHelloWorldCode).success.value
